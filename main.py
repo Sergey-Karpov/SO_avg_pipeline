@@ -498,15 +498,6 @@ print("\n✅ Пример входных данных сохранен в 'examp
 print("\n" + "=" * 60)
 print("📌 ТРЕБОВАНИЯ К ВХОДНЫМ ДАННЫМ ДЛЯ ПРЕДСКАЗАНИЯ:")
 print("=" * 60)
-print("Ваш JSON/Excel/DataFrame должен содержать 8 колонок (БЕЗ city!):")
+print("JSON/Excel/DataFrame должен содержать 8 колонок:")
 for i, col in enumerate(PREDICTION_INPUT_FEATURES, 1):
     print(f"  {i}. {col}")
-
-print("\n🔄 Что создается автоматически из входных данных:")
-print("  - cereals_milk_ratio = cereals / (milk + 1)")
-print("  - cereals_milk_multi = cereals * milk")
-print("  - aushan_count_share_in_city = aushan_count_in_city / total")
-print("  - detmir_count_share_in_city = detmir_count_in_city / total")
-print("  - lenta_count_share_in_city = lenta_count_in_city / total")
-print("  - chain_Детский мир, chain_Лента (one-hot encoding)")
-print("\n❌ Город (city) НЕ требуется на входе - он полностью исключен!")
