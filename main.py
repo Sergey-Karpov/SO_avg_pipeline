@@ -39,14 +39,31 @@ class OutlierHandler(BaseEstimator, TransformerMixin):
 
 class FeatureCreator(BaseEstimator, TransformerMixin):
     """Создание новых признаков из cereals и milk"""
+    def __init__(self, use_predict=False):
+        self.use_predict = use_predict
+        self.store_counts = None
 
     def fit(self, X, y=None):
-        return self
+        if not self.use_predict:
+            self.store_counts = pd.crosstab(X["city"], X["chain"])
+            return self
 
     def transform(self, X, y=None):
         X_copy = X.copy()
         X_copy["cereals_milk_ratio"] = X_copy["cereals"] / (X_copy["milk"] + 1)
         X_copy["cereals_milk_multi"] = X_copy["cereals"] * X_copy["milk"]
+        if not self.use_predict:
+            X_copy["aushan_count_in_city"] = X_copy["city"].map(self.store_counts["Ашан"]).fillna(0)
+            X_copy["detmir_count_in_city"] = X_copy["city"].map(self.store_counts["Детский мир"]).fillna(0)
+            X_copy["lenta_count_in_city"] = X_copy["city"].map(self.store_counts["Лента"]).fillna(0)
+
+        else:
+            required_cols = ["aushan_count_in_city", "detmir_count_in_city", "lenta_count_in_city"]
+            missing_cols = [col for col in required_cols if col not in X_copy.columns]
+
+            if missing_cols:
+                raise ValueError(f"Для предсказания необходимы колонки {missing_cols}")
+
         return X_copy
 
 
@@ -80,9 +97,9 @@ class ShareCalculator(BaseEstimator, TransformerMixin):
 class PopulationTransformer(BaseEstimator, TransformerMixin):
     """Добавление данных о населении"""
 
-    def __init__(self, population_file='data/population.xlsx', use_external=False):
+    def __init__(self, population_file='data/population.xlsx', use_predict=False):
         self.population_file = population_file
-        self.use_external = use_external
+        self.use_predict = use_predict
         self.population_data = None
         self.manual_population = {
             'Москва обл': 8775735,
@@ -94,7 +111,7 @@ class PopulationTransformer(BaseEstimator, TransformerMixin):
         }
 
     def fit(self, X, y=None):
-        if not self.use_external:
+        if not self.use_predict:
             try:
                 df_pop = pd.read_excel(self.population_file)
                 df_pop.rename(columns={
@@ -118,7 +135,7 @@ class PopulationTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         X_copy = X.copy()
 
-        if self.use_external:
+        if self.use_predict:
             # Для предсказаний - population уже есть во входных данных
             if 'population' not in X_copy.columns:
                 raise ValueError("Для предсказания необходима колонка 'population'")
@@ -139,13 +156,13 @@ class PopulationTransformer(BaseEstimator, TransformerMixin):
 class MarketShareTransformer(BaseEstimator, TransformerMixin):
     """Добавление данных о доле рынка"""
 
-    def __init__(self, market_share_file='data/market_share.xlsx', use_external=False):
+    def __init__(self, market_share_file='data/market_share.xlsx', use_predict=False):
         self.market_share_file = market_share_file
-        self.use_external = use_external
+        self.use_predict = use_predict
         self.market_share_data = None
 
     def fit(self, X, y=None):
-        if not self.use_external:
+        if not self.use_predict:
             try:
                 df_share = pd.read_excel(self.market_share_file)
                 df_share['city'] = df_share['city'].replace({
@@ -162,7 +179,7 @@ class MarketShareTransformer(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         X_copy = X.copy()
 
-        if self.use_external:
+        if self.use_predict:
             # Для предсказаний - market_share уже есть во входных данных
             if 'market_share' not in X_copy.columns:
                 raise ValueError("Для предсказания необходима колонка 'market_share'")
@@ -221,11 +238,11 @@ print(f"Исходный размер данных: {df.shape}")
 # Создание pipeline для ОБУЧЕНИЯ
 training_pipeline = Pipeline([
     ('outlier_handler', OutlierHandler(column='avg')),
-    ('feature_creator', FeatureCreator()),
+    ('feature_creator', FeatureCreator(use_predict=False)),
     ('share_calculator', ShareCalculator()),
-    ('population', PopulationTransformer(use_external=False)),
-    ('market_share', MarketShareTransformer(use_external=False)),
-    ('column_dropper', ColumnDropper(['id']))
+    ('population', PopulationTransformer(use_predict=False)),
+    ('market_share', MarketShareTransformer(use_predict=False)),
+    ('column_dropper', ColumnDropper(['id', 'city']))
 ])
 
 # Подготовка данных через pipeline
@@ -318,8 +335,10 @@ PREDICTION_INPUT_FEATURES = [
 # Создаем pipeline для ПРЕДСКАЗАНИЯ
 prediction_pipeline = Pipeline([
     ('input_validator', InputFeatureValidator(PREDICTION_INPUT_FEATURES)),
-    ('feature_creator', FeatureCreator()),
+    ('feature_creator', FeatureCreator(use_predict=True)),
     ('share_calculator', ShareCalculator()),
+    ('population', PopulationTransformer(use_predict=True)),
+    ('market_share', MarketShareTransformer(use_predict=True)),
     ('column_dropper', ColumnDropper([
         'aushan_count_in_city', 'detmir_count_in_city',
         'lenta_count_in_city', 'top_chains_stores_count'
