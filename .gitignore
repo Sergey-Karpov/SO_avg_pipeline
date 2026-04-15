@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Data files (ваши данные)
+data/
+*.xlsx
+*.xls
+*.csv
+
+# Logs
+*.log
+
+# Environment variables
+.env
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Your project specific
+model_artifacts.pkl
+model_artifacts.joblib
+random_forest_model.pkl
+example_input.xlsx
+
+# Data directory (если содержит исходные данные)
+/data/
