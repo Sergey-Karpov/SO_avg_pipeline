@@ -222,6 +222,7 @@ print(f"Исходный размер данных: {df.shape}")
 training_pipeline = Pipeline([
     ('outlier_handler', OutlierHandler(column='avg')),
     ('feature_creator', FeatureCreator()),
+    ('share_calculator', ShareCalculator()),
     ('population', PopulationTransformer(use_external=False)),
     ('market_share', MarketShareTransformer(use_external=False)),
     ('column_dropper', ColumnDropper(['id']))
@@ -231,29 +232,6 @@ training_pipeline = Pipeline([
 print("Применяем pipeline для подготовки данных...")
 df_prepared = training_pipeline.fit_transform(df)
 print(f"Размер после pipeline: {df_prepared.shape}")
-
-# Подсчет магазинов по городам
-store_counts = pd.crosstab(df_prepared['city'], df_prepared['chain'])
-df_prepared['aushan_count_in_city'] = df_prepared['city'].map(store_counts['Ашан']).fillna(0)
-df_prepared['detmir_count_in_city'] = df_prepared['city'].map(store_counts['Детский мир']).fillna(0)
-df_prepared['lenta_count_in_city'] = df_prepared['city'].map(store_counts['Лента']).fillna(0)
-
-# Расчет долей топовых сетей
-df_prepared['top_chains_stores_count'] = (
-        df_prepared['aushan_count_in_city'] +
-        df_prepared['detmir_count_in_city'] +
-        df_prepared['lenta_count_in_city']
-)
-denominator = df_prepared['top_chains_stores_count'].replace(0, 1)
-df_prepared['aushan_count_share_in_city'] = df_prepared['aushan_count_in_city'] / denominator
-df_prepared['detmir_count_share_in_city'] = df_prepared['detmir_count_in_city'] / denominator
-df_prepared['lenta_count_share_in_city'] = df_prepared['lenta_count_in_city'] / denominator
-
-# Удаляем city
-df_prepared = df_prepared.drop(['city', 'top_chains_stores_count'], axis=1)
-
-print(f"Размер после добавления признаков: {df_prepared.shape}")
-print(f"Все колонки: {df_prepared.columns.tolist()}")
 
 # Разделение на признаки и целевую переменную
 X = df_prepared.drop(['avg'], axis=1)
